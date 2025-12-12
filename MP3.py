@@ -10,31 +10,37 @@ class Voiture:
 
     def releve_immatriculation(self):
         return self.immat
-
+    
     def nom_proprio(self):
         return self.proprio
-
+    
     def constructeur(self):
         return self.marque
-
+    
     def abonner(self):
         if self.sub == "Oui" or self.sub == "oui":
             return True
         else:
             return False
-
-
+    
 class Parking:
-    
-    def __init__ (self, etages:int, places, reserver_sub)->None:
-        self.etage = etages
-        self.place = places
+    #5 étages avec des places numéroté de 1 à 480(80/e)
+    #place dispo 
+    #emplacement précis occupé
+    #donné place libre à une nouvelle voiture
+    def __init__(self, place, etage, reserver_sub):
+        self.place = place
+        self.etage = etage
         self.reserver_sub = reserver_sub
-    
-    def __str__(self)->str:
+
+        self.liste_places = self.creation_place()
+        self.occupe = self.initialiser_occupation()
+        self.abonnes = set()
+
+    def __str__(self):
         return f"Le parking possède {self.etage} étages avec {self.place} places, dont {self.reserver_sub} réservées aux abonnés."
-    
-    def places_dispo(self):
+
+    def creation_place(self):
         lst = []
         for i in range(self.etage):
             floor = f"{i}"
@@ -46,86 +52,108 @@ class Parking:
                     pla = f"{j}"
                     lst.append(floor+pla)
         return lst
+                    
+    def initialiser_occupation(self):
+        return {p: None for p in self.liste_places}
+    
+    def places_dispo(self):
+        return [p for p, v in self.occupe.items() if v is None]
 
     def place_libre_occuper(self, voiture:Voiture):
-            for i in range(len(self.places_dispo())):
-                if self.places_dispo()[i] == voiture.releve_immatriculation():
-                    return f"La place {self.places_dispo()[i]} est occupée par la voiture immatriculée {voiture.releve_immatriculation()}."
-            return f"La voiture immatriculée {voiture.releve_immatriculation()} n'a pas de place attribuée."
+        for place, voiture_place in self.occupe.items():
+            if voiture_place and voiture_place.releve_immatriculation() == voiture.releve_immatriculation():
+                return f"La voiture {voiture.releve_immatriculation()} occupe la place {place}."
+        return f"La voiture {voiture.releve_immatriculation()} n'a pas de place attribuée."
         
     def attribuer_place(self, voiture:Voiture):
-        for i in range(len(self.places_dispo())):
-            if self.places_dispo()[i] != voiture.releve_immatriculation():
-                return f"La place {self.places_dispo()[i]} a été attribuée à la voiture immatriculée {voiture.releve_immatriculation()}."
+        for place, voiture_place in self.occupe.items():
+            if voiture_place is None:
+                self.occupe[place] = voiture
+                return f"La place {place} a été attribuée à la voiture immatriculée {voiture.releve_immatriculation()}."
         return f"Aucune place disponible pour la voiture immatriculée {voiture.releve_immatriculation()}."
 
     def abonner_voiture(self, voiture:Voiture):
         if voiture.abonner():
+            self.abonnes.add(voiture.immat)
             return f"La voiture immatriculée {voiture.releve_immatriculation()} est abonnée au parking."
         else:
             return f"La voiture immatriculée {voiture.releve_immatriculation()} n'est pas abonnée au parking."
         
     def desabonner_voiture(self, voiture:Voiture):
         if not voiture.abonner():
+            self.abonnes.remove(voiture.immat)
             return f"La voiture immatriculée {voiture.releve_immatriculation()} n'est pas abonnée au parking."
         else:
             return f"La voiture immatriculée {voiture.releve_immatriculation()} a été désabonnée du parking."
         
     def place_reservee_abonne(self, voiture:Voiture):
-        if voiture.abonner():
+        if voiture.immat in self.abonnes:
             return f"La voiture immatriculée {voiture.releve_immatriculation()} peut accéder aux places réservées aux abonnés."
         else:
             return f"La voiture immatriculée {voiture.releve_immatriculation()} ne peut pas accéder aux places réservées aux abonnés."
     
-    def renvoyer_liste_places_abonnees_occupees(self):
-        liste_abonnes = []
-        for i in range(len(self.places_dispo())):
-            liste_abonnes.append(self.places_dispo()[i])
-        return liste_abonnes
-    
     def nombre_places_libres_sans_compter_place_abonnees(self):
-        total_places = self.etage * self.place
-        places_abonnees = self.reserver_sub
-        places_libres = total_places - places_abonnees
-        return places_libres
+        places_normales = self.liste_places[self.reserver_sub:]
+        return sum(1 for p in places_normales if self.occupe[p] is None)
     
     def representation_niveau_du_parking_texte(self):
-        representation = ""
+        rep = ""
         for i in range(self.etage):
-            representation += f"Étage {i}:\n"
+            rep += f"Étage {i}:\n"
             for j in range(self.place):
-                if j < 10:
-                    representation += f"[0{j}] "
-                else:
-                    representation += f"[{j}] "
-            representation += "\n"
-        return representation
+                place = f"{i}{j:02d}"
+                rep += "[X] " if self.occupe[place] else "[ ] "
+            rep += "\n"
+        return rep
 
    
     
     
+# --- Création de voitures ---
+voiture1 = Voiture("AA123BB", "Peugeot", "Alice", "oui")
+voiture2 = Voiture("CC456DD", "Renault", "Bob", "non")
+voiture3 = Voiture("EE789FF", "Toyota", "Charlie", "oui")
 
+# --- Création du parking ---
+parking = Parking(place=5, etage=2, reserver_sub=3)  # petit parking pour test
 
-print("=== TEST DE LA CLASSE VOITURE ===")
-v1 = Voiture("AA123AA", "Citroën", "René Latope", "Oui")
+# --- Initialisation des places et occupation ---
+parking.liste_places = parking.creation_place()
+parking.occupe = parking.initialiser_occupation()
 
-print(v1)                              # Test **str**
-print(v1.releve_immatriculation())     # Test immatriculation
-print(v1.nom_proprio())                # Test nom propriétaire
-print(v1.constructeur())               # Test marque
-print(v1.abonner())                    # Test abonnement (True/False)
+# --- Affichage du parking vide ---
+print("Parking vide :")
+print(parking.representation_niveau_du_parking_texte())
 
-print("\n=== TEST DE LA CLASSE PARKING ===")
-p = Parking(2, 5, 2)                   # 2 étages, 5 places par étage, 2 réservées aux abonnés
+# --- Attribution des places ---
+print(parking.attribuer_place(voiture1))
+print(parking.attribuer_place(voiture2))
+print(parking.attribuer_place(voiture3))
 
-print(p)                               # Test **str**
-print(p.places_dispo())                # Affiche toutes les places générées
-print(p.place_libre_occuper(v1))       # Vérifie si la voiture occupe une place
-print(p.attribuer_place(v1))           # Attribue une place
-print(p.abonner_voiture(v1))           # Vérifie si elle est abonnée
-print(p.desabonner_voiture(v1))        # Désabonne la voiture
-print(p.place_reservee_abonne(v1))     # Vérifie si elle peut accéder aux places réservées
-print(p.renvoyer_liste_places_abonnees_occupees())  # Liste des places d'abonnés occupées
-print(p.nombre_places_libres_sans_compter_place_abonnees())  # Places libres hors abonnés
-print(p.representation_niveau_du_parking_texte())   # Affiche la structure du parking
+# --- Affichage du parking après attribution ---
+print("\nParking après attribution :")
+print(parking.representation_niveau_du_parking_texte())
 
+# --- Vérification des abonnements ---
+print(parking.abonner_voiture(voiture1))
+print(parking.abonner_voiture(voiture2))
+print(parking.abonner_voiture(voiture3))
+
+# --- Vérification des places occupées ---
+print(parking.place_libre_occuper(voiture1))
+print(parking.place_libre_occuper(voiture2))
+print(parking.place_libre_occuper(voiture3))
+
+# --- Places réservées occupées par non-abonnés ---
+print("Places d'abonnés occupées par non-abonnés :")
+print(parking.liste_places_abonnees_occupees() if hasattr(parking, "liste_places_abonnees_occupees") else "Méthode non définie")
+
+# --- Nombre de places libres hors abonnés ---
+print("Nombre de places libres hors réservées :", parking.nombre_places_libres_sans_compter_place_abonnees())
+
+# --- Désabonnement d'une voiture ---
+print(parking.desabonner_voiture(voiture1))
+
+# --- Vérification des accès aux places réservées ---
+print(parking.place_reservee_abonne(voiture1))
+print(parking.place_reservee_abonne(voiture3))
